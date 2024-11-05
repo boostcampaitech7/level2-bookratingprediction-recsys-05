@@ -1,0 +1,10 @@
+data/
+code/data
+code/saved
+code/wandb
+code/checkpoints
+*.tar.gz
+.venv/
+*.csv
+*.ipynb
+*.pyc
