@@ -7,6 +7,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoTokenizer, AutoModel
 from .basic_data import basic_data_split
+from .context_data import process_context_data
 
 
 def text_preprocessing(summary):
@@ -220,16 +221,19 @@ def text_data_load(args):
     model = AutoModel.from_pretrained(args.model_args[args.model].pretrained_model).to(device=args.device)
     model.eval()
     users_, books_ = process_text_data(train, users, books, tokenizer, model, args.model_args[args.model].vector_create)
-
+    users_2, books_2 = process_context_data(users, books)
+    
     # 유저 및 책 정보를 합쳐서 데이터 프레임 생성 (단, 베이스라인에서는 user_id, isbn, user_summary_merge_vector, book_summary_vector만 사용함)
     # 사용할 컬럼을 user_features와 book_features에 정의합니다. (단, 모두 범주형 데이터로 가정)
-    user_features = []
-    book_features = []
+    user_features = ['user_id', 'age_range', 'location_country', 'location_state', 'location_city']
+    book_features = ['isbn', 'book_title', 'book_author', 'publisher', 'language', 'category', 'publication_range']
     sparse_cols = ['user_id', 'isbn'] + list(set(user_features + book_features) - {'user_id', 'isbn'})
     
     train_df = train.merge(books_, on='isbn', how='left')\
+                    .merge(books_2, on='isbn', how='left')\
                     .merge(users_, on='user_id', how='left')[sparse_cols + ['user_summary_merge_vector', 'book_summary_vector', 'rating']]
     test_df = test.merge(books_, on='isbn', how='left')\
+                  .merge(books_2, on='isbn', how='left')\
                   .merge(users_, on='user_id', how='left')[sparse_cols + ['user_summary_merge_vector', 'book_summary_vector']]
     all_df = pd.concat([train, test], axis=0)
 
@@ -237,11 +241,13 @@ def text_data_load(args):
     label2idx, idx2label = {}, {}
     for col in sparse_cols:
         all_df[col] = all_df[col].fillna('unknown')
+        train_df[col] = train_df[col].fillna('unknown')
+        test_df[col] = test_df[col].fillna('unknown')
         unique_labels = all_df[col].astype("category").cat.categories
         label2idx[col] = {label:idx for idx, label in enumerate(unique_labels)}
         idx2label[col] = {idx:label for idx, label in enumerate(unique_labels)}
-        train_df[col] = train_df[col].astype("category").cat.codes
-        test_df[col] = test_df[col].astype("category").cat.codes
+        train_df[col] = train_df[col].map(label2idx[col])
+        test_df[col] = test_df[col].map(label2idx[col])
 
     field_dims = [len(label2idx[col]) for col in sparse_cols]
 

@@ -2,6 +2,10 @@ code/data
 code/saved
 code/wandb
 code/checkpoints
+code/catboost_info
+code/log
+code/saved_models
+
 *.tar.gz
 .venv/
 *.csv

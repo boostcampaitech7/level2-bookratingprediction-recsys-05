@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-from torch.nn import LayerNorm
-from ._helpers import FeaturesEmbedding, MLP_Base
+
 
 
 # Embedding & Reshape Layer
@@ -26,9 +24,9 @@ class EmbeddingLayer(nn.Module):
         # Chunk into two views: e_a and e_b
         return torch.chunk(embed, 2, dim=-1)
     
-class CrossNetwork(nn.Module):
+class CrossNetworkV3(nn.Module):
     def __init__(self, input_dim, num_layers, mask_rate=0.5):
-        super(CrossNetwork, self).__init__()
+        super(CrossNetworkV3, self).__init__()
         self.num_layers = num_layers
         self.mask_rate = mask_rate
         self.weights = nn.ModuleList([nn.Linear(input_dim, input_dim, bias=False) for _ in range(num_layers)])
@@ -77,8 +75,8 @@ class SDCNv3(nn.Module):
     def __init__(self, vocab_sizes, embed_dim, num_cross_layers, input_dim):
         super(SDCNv3, self).__init__()
         self.embedding_layer = EmbeddingLayer(vocab_sizes, embed_dim)
-        self.cross_network_d = CrossNetwork(input_dim, num_cross_layers)  # DCNv3
-        self.cross_network_s = CrossNetwork(input_dim, num_cross_layers)  # SCNv3
+        self.cross_network_d = CrossNetworkV3(input_dim, num_cross_layers)  # DCNv3
+        self.cross_network_s = CrossNetworkV3(input_dim, num_cross_layers)  # SCNv3
         self.fusion_layer = FusionLayer(input_dim)
         self.loss_fn = TriBCELoss()
 

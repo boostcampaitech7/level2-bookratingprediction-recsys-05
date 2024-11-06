@@ -62,3 +62,4 @@ class DeepCrossNetwork(nn.Module):
         x_out = self.mlp(x_l1)
         p = self.cd_linear(x_out)
         return p.squeeze(1)
+

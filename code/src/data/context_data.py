@@ -146,16 +146,21 @@ def context_data_load(args):
     
     field_dims = [len(label2idx[col]) for col in train_df.columns if col != 'rating']
 
+    # 'num_users'와 'num_items' 계산 및 추가
+    num_users = len(label2idx['user_id'])
+    num_items = len(label2idx['isbn'])
+
     data = {
-            'all_df': all_df,
-            'train':train_df,
-            'test':test_df,
-            'field_names':sparse_cols,
-            'field_dims':field_dims,
-            'label2idx':label2idx,
-            'idx2label':idx2label,
-            'sub':sub,
-            }
+        'train': train_df,
+        'test': test_df,
+        'field_names': sparse_cols,
+        'field_dims': field_dims,
+        'label2idx': label2idx,
+        'idx2label': idx2label,
+        'sub': sub,
+        'num_users': num_users,  # 추가
+        'num_items': num_items   # 추가
+    }
 
     return data
 

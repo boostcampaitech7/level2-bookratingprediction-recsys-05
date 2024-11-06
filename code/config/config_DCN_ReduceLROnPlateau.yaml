@@ -16,7 +16,7 @@ seed: 0         # 시드 고정
 device: cuda    # 가능한 값 : cpu, cuda, mps
 model: FM       # 모델 선택
 wandb: False                            # wandb 사용 여부
-wandb_project: 'book-rating-prediction' # wandb 프로젝트 이름
+wandb_project: 'DCNV3 스케줄러 확인' # wandb 프로젝트 이름
 run_name: ''                            # wandb 실행 이름. 빈 문자열일 경우 자동 생성
 
 
@@ -145,11 +145,13 @@ loss: RMSELoss          # 직접 정의한 loss 클래스 또는 torch.nn.Module
 #         step_size: 10           # 예) StepLR / 학습률 감소 주기 (필수)
 #         gamma: 0.1              # 예) StepLR 등 / 학습률 감소 비율
 lr_scheduler:
-    use: True
-    type: StepLR
-    args:
-        step_size: 2                # Step 주기
-        gamma: 0.1                  # 학습률 감소 비율
+    use: True                  # True: 사용 / False: 사용하지 않음 (단, valid_ratio가 0일 경우 validation set이 없어 사용 불가)
+    type: ReduceLROnPlateau     # 사용가능한 lr_scheduler: torch.optim.lr_scheduler 클래스 (https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate)
+    args:                       # 사용하고자 하는 클래스의 파라미터를 참고하여 추가해주시면 되며, 관계가 없는 파라미터는 무시됩니다.
+        mode: 'min'             # 예) ReduceLROnPlateau / 'min' 또는 'max'
+        factor: 0.1             # 예) ReduceLROnPlateau / 학습률 감소 비율
+        step_size: 10           # 예) StepLR / 학습률 감소 주기 (필수)
+        gamma: 0.1              # 예) StepLR 등 / 학습률 감소 비율
 
 metrics: [MSELoss, MAELoss, RMSELoss]  # 평가 지표. 직접 정의한 loss 클래스 또는 torch.nn.Module 클래스 (https://pytorch.org/docs/stable/nn.html#loss-functions)
 

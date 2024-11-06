@@ -31,7 +31,7 @@ class CrossNetworkV2(nn.Module):
 
 # DCN V2의 DeepCrossNetwork 클래스 (stacked 및 parallel 모드 지원)
 class DeepCrossNetworkV2(nn.Module):
-    def __init__(self, args, data, mode='stacked'):
+    def __init__(self, args, data, mode='parallel'):
         super().__init__()
         self.field_dims = data['field_dims']
         self.embedding = FeaturesEmbedding(self.field_dims, args.embed_dim)
