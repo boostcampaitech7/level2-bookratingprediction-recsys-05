@@ -28,6 +28,7 @@ class DeepFM(nn.Module):
                              dropout=args.dropout,
                              output_layer=True
                             )
+        self.output_layer = nn.Linear(1, 1)
 
 
     def forward(self, x: torch.Tensor):
@@ -42,6 +43,7 @@ class DeepFM(nn.Module):
 
         # deep network를 통해 feature를 학습하는 부분
         deep_out = self.dnn(embedding.view(-1, embedding.size(1) * embedding.size(2))).squeeze(1)
+        combined_out = first_order + second_order + deep_out
 
-        return first_order + second_order + deep_out
+        return self.output_layer(combined_out.unsqueeze(1)).squeeze(1)
 
