@@ -137,7 +137,7 @@ lr_scheduler:
 metrics: [MSELoss, MAELoss, RMSELoss]  # 평가 지표. 직접 정의한 loss 클래스 또는 torch.nn.Module 클래스 (https://pytorch.org/docs/stable/nn.html#loss-functions)
 
 train:
-    epochs: 20                          # 학습 에폭 수
+    epochs: 5                          # 학습 에폭 수
     log_dir: saved/log                  # 로그 저장 경로
     ckpt_dir: saved/checkpoint    # 모델 저장 경로
     submit_dir: saved/submit            # 예측 저장 경로

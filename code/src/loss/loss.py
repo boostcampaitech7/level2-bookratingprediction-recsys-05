@@ -14,7 +14,6 @@ class RMSELoss(nn.Module):
         return loss
     
 
-
 class CrossEntropyLoss(nn.Module):
     def __init__(self):
         super(CrossEntropyLoss, self).__init__()
@@ -26,16 +25,4 @@ class CrossEntropyLoss(nn.Module):
         # softmax를 적용하지 않고, nn.CrossEntropyLoss와 동일하게 동작하기 위해
         # F.cross_entropy는 logits에서 직접 loss를 계산합니다.
         loss = F.cross_entropy(logits, targets)
-        return lossimport torch
-import torch.nn as nn
-from torch.nn import MSELoss, L1Loss as MAELoss
-from torch.nn import *
-
-class RMSELoss(nn.Module):
-    def __init__(self):
-        super(RMSELoss, self).__init__()
-        self.eps = 1e-6
-    def forward(self, x, y):
-        criterion = MSELoss()
-        loss = torch.sqrt(criterion(x, y)+self.eps)
         return loss
