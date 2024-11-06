@@ -168,7 +168,9 @@ if __name__ == "__main__":
     main(config_yaml)
 
     if args.wandb:
-        wandb.finish()import argparse
+        wandb.finish()
+        
+import argparse
 import ast
 from omegaconf import OmegaConf
 import pandas as pd
