@@ -9,7 +9,7 @@ from .context_data import process_context_data
 
 
 class Image_Dataset(Dataset):
-    def __init__(self, user_book_vector, img_vector, rating=None):
+    def __init__(self, user_book_vector, img_vector, rating=None, weights=None):
         """
         Parameters
         ----------
@@ -23,13 +23,15 @@ class Image_Dataset(Dataset):
         self.user_book_vector = user_book_vector
         self.img_vector = img_vector
         self.rating = rating
+        self.weights = weights
     def __len__(self):
         return self.user_book_vector.shape[0]
     def __getitem__(self, i):
         return {
                 'user_book_vector' : torch.tensor(self.user_book_vector[i], dtype=torch.long),
                 'img_vector' : torch.tensor(self.img_vector[i], dtype=torch.float32),
-                'rating' : torch.tensor(self.rating[i], dtype=torch.float32)
+                'rating' : torch.tensor(self.rating[i], dtype=torch.float32),
+                'weights': torch.tensor(self.weights[i], dtype=torch.float32)
                 } if self.rating is not None else \
                 {
                 'user_book_vector' : torch.tensor(self.user_book_vector[i], dtype=torch.long),
@@ -155,6 +157,17 @@ def image_data_split(args, data):
     """학습 데이터를 학습/검증 데이터로 나누어 추가한 후 반환합니다."""
     data = basic_data_split(args, data)
     
+    # 레이팅 빈도수 계산
+    rating_counts = data['y_train'].value_counts()
+    total_counts = len(data['y_train'])
+    rating_freq = rating_counts / total_counts
+    # 가중치 계산 (빈도의 역수)
+    rating_weights = 1 / rating_freq
+    # 가중치 정규화 (평균으로 나누어줌)
+    rating_weights = rating_weights / rating_weights.mean()
+    # 가중치 저장
+    data['rating_weights'] = rating_weights
+    
     # 전체 학습 데이터를 위한 X_train_full, y_train_full 생성
     data['X_train_full'] = pd.concat([data['X_train'], data['X_valid']], axis=0).reset_index(drop=True)
     data['y_train_full'] = pd.concat([data['y_train'], data['y_valid']], axis=0).reset_index(drop=True)
@@ -182,15 +195,25 @@ def image_data_loader(args, data):
     data : Dict
         Image_Dataset 형태의 학습/검증/테스트 데이터를 DataLoader로 변환하여 추가한 후 반환합니다.
     """
+    
+    # 레이팅에 해당하는 가중치를 매핑
+    y_train_weights = data['y_train'].map(data['rating_weights']).values
+    if args.dataset.valid_ratio != 0:
+        y_valid_weights = data['y_valid'].map(data['rating_weights']).values
+    else:
+        y_valid_weights = None
+        
     train_dataset = Image_Dataset(
                                 data['X_train'][data['field_names']].values,
                                 data['X_train']['img_vector'].values,
-                                data['y_train'].values
+                                data['y_train'].values,
+                                y_train_weights
                                 )
     valid_dataset = Image_Dataset(
                                 data['X_valid'][data['field_names']].values,
                                 data['X_valid']['img_vector'].values,
-                                data['y_valid'].values
+                                data['y_valid'].values,
+                                y_valid_weights  
                                 ) if args.dataset.valid_ratio != 0 else None
     test_dataset = Image_Dataset(
                                 data['test'][data['field_names']].values,
@@ -199,7 +222,8 @@ def image_data_loader(args, data):
     full_train_dataset = Image_Dataset(
                                       data['X_train_full'][data['field_names']].values,
                                       data['X_train_full']['img_vector'].values,
-                                      data['y_train_full'].values
+                                      data['y_train_full'].values,
+                                      pd.concat([data['y_train'], data['y_valid']], axis=0).map(data['rating_weights']).values  # 전체 학습 데이터 가중치
                                       )
     train_dataloader = DataLoader(train_dataset, batch_size=args.dataloader.batch_size, shuffle=args.dataloader.shuffle, num_workers=args.dataloader.num_workers)
     valid_dataloader = DataLoader(valid_dataset, batch_size=args.dataloader.batch_size, shuffle=False, num_workers=args.dataloader.num_workers) if args.dataset.valid_ratio != 0 else None

@@ -160,7 +160,7 @@ def process_text_data(ratings, users, books, tokenizer, model, vector_create=Fal
 
 
 class Text_Dataset(Dataset):
-    def __init__(self, user_book_vector, user_summary_vector, book_summary_vector, rating=None):
+    def __init__(self, user_book_vector, user_summary_vector, book_summary_vector, rating=None, weights=None):
         """
         Parameters
         ----------
@@ -178,6 +178,8 @@ class Text_Dataset(Dataset):
         self.user_summary_vector = user_summary_vector
         self.book_summary_vector = book_summary_vector
         self.rating = rating
+        self.weights = weights
+        
     def __len__(self):
         return self.user_book_vector.shape[0]
     def __getitem__(self, i):
@@ -186,6 +188,7 @@ class Text_Dataset(Dataset):
                 'user_summary_vector' : torch.tensor(self.user_summary_vector[i], dtype=torch.float32),
                 'book_summary_vector' : torch.tensor(self.book_summary_vector[i], dtype=torch.float32),
                 'rating' : torch.tensor(self.rating[i], dtype=torch.float32),
+                'weights': torch.tensor(self.weights[i], dtype=torch.float32)
                 } if self.rating is not None else \
                 {
                 'user_book_vector' : torch.tensor(self.user_book_vector[i], dtype=torch.long),
@@ -228,15 +231,24 @@ def text_data_load(args):
     user_features = ['user_id', 'age_range', 'location_country', 'location_state', 'location_city']
     book_features = ['isbn', 'book_title', 'book_author', 'publisher', 'language', 'category', 'publication_range']
     sparse_cols = ['user_id', 'isbn'] + list(set(user_features + book_features) - {'user_id', 'isbn'})
+    # print(f"train.columns = {train.columns}")
+    # print(f"books_.columns = {books_.columns}")
+    # print(f"books_2.columns = {books_.columns}")
+    # print(f"users_.columns = {users_.columns}")
+    # print(f"users_2.columns = {users_.columns}")
     
-    train_df = train.merge(books_, on='isbn', how='left')\
-                    .merge(books_2, on='isbn', how='left')\
-                    .merge(users_, on='user_id', how='left')[sparse_cols + ['user_summary_merge_vector', 'book_summary_vector', 'rating']]
-    test_df = test.merge(books_, on='isbn', how='left')\
-                  .merge(books_2, on='isbn', how='left')\
-                  .merge(users_, on='user_id', how='left')[sparse_cols + ['user_summary_merge_vector', 'book_summary_vector']]
-    all_df = pd.concat([train, test], axis=0)
-
+    train_df = train.merge(books_[['isbn', 'book_summary_vector']], on='isbn', how='left')\
+                    .merge(books_2[book_features], on='isbn', how='left')\
+                    .merge(users_[['user_id', 'user_summary_merge_vector']], on='user_id', how='left')\
+                    .merge(users_2[user_features], on='user_id', how='left')[sparse_cols + ['user_summary_merge_vector', 'book_summary_vector', 'rating']]
+    test_df = test.merge(books_[['isbn', 'book_summary_vector']], on='isbn', how='left')\
+                  .merge(books_2[book_features], on='isbn', how='left')\
+                  .merge(users_[['user_id', 'user_summary_merge_vector']], on='user_id', how='left')\
+                  .merge(users_2[user_features], on='user_id', how='left')[sparse_cols + ['user_summary_merge_vector', 'book_summary_vector']]
+    all_df = pd.concat([train_df, test_df], axis=0)
+    # print(f"all_df.columns = {all_df.columns}")
+    # print(f"train_df.columns = {train_df.columns}")
+    # print(f"test_df.columns = {test_df.columns}")
     # feature_cols의 데이터만 라벨 인코딩하고 인덱스 정보를 저장
     label2idx, idx2label = {}, {}
     for col in sparse_cols:
@@ -268,6 +280,17 @@ def text_data_split(args, data):
     """학습 데이터를 학습/검증 데이터로 나누어 추가한 후 반환합니다."""
     data = basic_data_split(args, data)
     
+    # 레이팅 빈도수 계산
+    rating_counts = data['y_train'].value_counts()
+    total_counts = len(data['y_train'])
+    rating_freq = rating_counts / total_counts
+    # 가중치 계산 (빈도의 역수)
+    rating_weights = 1 / rating_freq
+    # 가중치 정규화 (평균으로 나누어줌)
+    rating_weights = rating_weights / rating_weights.mean()
+    # 가중치 저장
+    data['rating_weights'] = rating_weights
+    
     # 전체 학습 데이터를 위한 X_train_full, y_train_full 생성
     data['X_train_full'] = pd.concat([data['X_train'], data['X_valid']], axis=0).reset_index(drop=True)
     data['y_train_full'] = pd.concat([data['y_train'], data['y_valid']], axis=0).reset_index(drop=True)
@@ -295,17 +318,26 @@ def text_data_loader(args, data):
     data : dict
         Text_Dataset 형태의 학습/검증/테스트 데이터를 DataLoader로 변환하여 추가한 후 반환합니다.
     """
+    
+    # 레이팅에 해당하는 가중치를 매핑
+    y_train_weights = data['y_train'].map(data['rating_weights']).values
+    if args.dataset.valid_ratio != 0:
+        y_valid_weights = data['y_valid'].map(data['rating_weights']).values
+    else:
+        y_valid_weights = None
     train_dataset = Text_Dataset(
                                 data['X_train'][data['field_names']].values,
                                 data['X_train']['user_summary_merge_vector'].values,
                                 data['X_train']['book_summary_vector'].values,
-                                data['y_train'].values
+                                data['y_train'].values,
+                                y_train_weights 
                                 )
     valid_dataset = Text_Dataset(
                                 data['X_valid'][data['field_names']].values,
                                 data['X_valid']['user_summary_merge_vector'].values,
                                 data['X_valid']['book_summary_vector'].values,
-                                data['y_valid'].values
+                                data['y_valid'].values,
+                                y_train_weights  
                                 ) if args.dataset.valid_ratio != 0 else None
     test_dataset = Text_Dataset(
                                 data['test'][data['field_names']].values,
@@ -316,7 +348,8 @@ def text_data_loader(args, data):
                                       data['X_train_full'][data['field_names']].values,
                                       data['X_train_full']['user_summary_merge_vector'].values,
                                       data['X_train_full']['book_summary_vector'].values,
-                                      data['y_train_full'].values
+                                      data['y_train_full'].values,
+                                      pd.concat([data['y_train'], data['y_valid']], axis=0).map(data['rating_weights']).values  # 전체 학습 데이터 가중치
                                       )
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.dataloader.batch_size, shuffle=args.dataloader.shuffle, num_workers=args.dataloader.num_workers)

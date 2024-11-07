@@ -12,7 +12,14 @@ class RMSELoss(nn.Module):
         criterion = MSELoss()
         loss = torch.sqrt(criterion(x, y)+self.eps)
         return loss
-    
+
+class WeightedRMSELoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, yhat, y, weights):
+        loss = (weights * (yhat - y) ** 2).mean()
+        return torch.sqrt(loss)
 
 class CrossEntropyLoss(nn.Module):
     def __init__(self):

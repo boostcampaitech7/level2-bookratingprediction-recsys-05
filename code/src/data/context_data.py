@@ -169,6 +169,17 @@ def context_data_split(args, data):
     '''data 내의 학습 데이터를 학습/검증 데이터로 나누어 추가한 후 반환합니다.'''
     data = basic_data_split(args, data)
     
+    # 레이팅 빈도수 계산
+    rating_counts = data['y_train'].value_counts()
+    total_counts = len(data['y_train'])
+    rating_freq = rating_counts / total_counts
+    # 가중치 계산 (빈도의 역수)
+    rating_weights = 1 / rating_freq
+    # 가중치 정규화 (평균으로 나누어줌)
+    rating_weights = rating_weights / rating_weights.mean()
+    # 가중치 저장
+    data['rating_weights'] = rating_weights
+    
     # 전체 학습 데이터를 위한 X_train_full, y_train_full 생성
     data['X_train_full'] = pd.concat([data['X_train'], data['X_valid']], axis=0).reset_index(drop=True)
     data['y_train_full'] = pd.concat([data['y_train'], data['y_valid']], axis=0).reset_index(drop=True)
@@ -197,11 +208,22 @@ def context_data_loader(args, data):
         DataLoader가 추가된 데이터를 반환합니다.
     """
 
-    train_dataset = TensorDataset(torch.LongTensor(data['X_train'].values), torch.LongTensor(data['y_train'].values))
-    valid_dataset = TensorDataset(torch.LongTensor(data['X_valid'].values), torch.LongTensor(data['y_valid'].values)) if args.dataset.valid_ratio != 0 else None
+    # 레이팅에 해당하는 가중치를 매핑
+    y_train_weights = data['y_train'].map(data['rating_weights']).values
+    if args.dataset.valid_ratio != 0:
+        y_valid_weights = data['y_valid'].map(data['rating_weights']).values
+    else:
+        y_valid_weights = None
+    
+    train_dataset = TensorDataset(torch.LongTensor(data['X_train'].values), torch.LongTensor(data['y_train'].values), torch.FloatTensor(y_train_weights))
+    if args.dataset.valid_ratio != 0:
+        valid_dataset = TensorDataset(torch.LongTensor(data['X_valid'].values), torch.LongTensor(data['y_valid'].values), torch.FloatTensor(y_valid_weights))
+    else:
+        valid_dataset = None
     test_dataset = TensorDataset(torch.LongTensor(data['test'].values))
     # 전체 학습 데이터를 위한 데이터셋 생성
-    full_train_dataset = TensorDataset(torch.LongTensor(data['X_train_full'].values), torch.LongTensor(data['y_train_full'].values))
+    y_train_full_weights = pd.concat([data['y_train'], data['y_valid']], axis=0).map(data['rating_weights']).values
+    full_train_dataset = TensorDataset(torch.LongTensor(data['X_train_full'].values), torch.LongTensor(data['y_train_full'].values), torch.FloatTensor(y_train_full_weights))
     
     train_dataloader = DataLoader(train_dataset, batch_size=args.dataloader.batch_size, shuffle=args.dataloader.shuffle, num_workers=args.dataloader.num_workers)
     valid_dataloader = DataLoader(valid_dataset, batch_size=args.dataloader.batch_size, shuffle=False, num_workers=args.dataloader.num_workers) if args.dataset.valid_ratio != 0 else None

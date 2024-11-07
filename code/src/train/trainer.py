@@ -7,6 +7,7 @@ import torch.optim as optimizer_module
 import torch.optim.lr_scheduler as scheduler_module
 
 METRIC_NAMES = {
+    'WeightedRMSELoss': 'WeightedRMSE',
     'RMSELoss': 'RMSE',
     'MSELoss': 'MSE',
     'MAELoss': 'MAE'
@@ -40,14 +41,14 @@ def train(args, model, dataloader, logger, setting):
         total_loss, train_len = 0, len(dataloader['train_dataloader'])
 
         for data in tqdm(dataloader['train_dataloader'], desc=f'[Epoch {epoch+1:02d}/{args.train.epochs:02d}]'):
-            if args.model_args[args.model].datatype == 'image':
-                x, y = [data['user_book_vector'].to(args.device), data['img_vector'].to(args.device)], data['rating'].to(args.device)
-            elif args.model_args[args.model].datatype == 'text':
-                x, y = [data['user_book_vector'].to(args.device), data['user_summary_vector'].to(args.device), data['book_summary_vector'].to(args.device)], data['rating'].to(args.device)
-            else:
-                x, y = data[0].to(args.device), data[1].to(args.device)
+            x, y, weights = get_input_and_label(args, data)
+            
             y_hat = model(x)
-            loss = loss_fn(y_hat, y.float())
+            if args.loss == 'WeightedRMSELoss':
+                loss = loss_fn(y_hat, y.float(), weights)
+            else:
+                loss = loss_fn(y_hat, y.float())
+                
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -128,9 +129,13 @@ def retrain_full_data(args, model, dataloader, loss_fn, best_epoch, setting):
         total_loss, train_len = 0, len(full_train_loader)
 
         for data in tqdm(full_train_loader, desc=f'[Retrain Epoch {epoch+1:02d}/{best_epoch:02d}]'):
-            x, y = get_input_and_label(args, data)
+            x, y, weights = get_input_and_label(args, data)
             y_hat = model(x)
-            loss = loss_fn(y_hat, y.float())
+            
+            if args.loss == 'WeightedRMSELoss':
+                loss = loss_fn(y_hat, y.float(), weights)
+            else:
+                loss = loss_fn(y_hat, y.float())
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -157,15 +162,14 @@ def valid(args, model, dataloader, loss_fn):
 
     with torch.no_grad():
         for data in dataloader:
-            if args.model_args[args.model].datatype == 'image':
-                x, y = [data['user_book_vector'].to(args.device), data['img_vector'].to(args.device)], data['rating'].to(args.device)
-            elif args.model_args[args.model].datatype == 'text':
-                x, y = [data['user_book_vector'].to(args.device), data['user_summary_vector'].to(args.device), data['book_summary_vector'].to(args.device)], data['rating'].to(args.device)
-            else:
-                x, y = data[0].to(args.device), data[1].to(args.device)
-          
+            x, y, weights = get_input_and_label(args, data)
             y_hat = model(x)
-            loss = loss_fn(y_hat, y.float())
+            # 현재 사용하는 손실 함수가 WeightedRMSELoss인지 확인
+            if isinstance(loss_fn, loss_module.WeightedRMSELoss):
+                loss = loss_fn(y_hat, y.float(), weights)
+            else:
+                loss = loss_fn(y_hat, y.float())
+
             total_loss += loss.item()
             
     return total_loss / len(dataloader)
@@ -202,8 +206,11 @@ def test(args, model, dataloader, setting, checkpoint=None):
 def get_input_and_label(args, data):
     if args.model_args[args.model].datatype == 'image':
         x, y = [data['user_book_vector'].to(args.device), data['img_vector'].to(args.device)], data['rating'].to(args.device)
+        weights = data['weights'].to(args.device)
     elif args.model_args[args.model].datatype == 'text':
         x, y = [data['user_book_vector'].to(args.device), data['user_summary_vector'].to(args.device), data['book_summary_vector'].to(args.device)], data['rating'].to(args.device)
+        weights = data['weights'].to(args.device)
     else:
         x, y = data[0].to(args.device), data[1].to(args.device)
-    return x, y
+        weights = data[2].to(args.device)
+    return x, y, weights
