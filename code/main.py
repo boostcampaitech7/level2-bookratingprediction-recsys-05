@@ -7,9 +7,8 @@ import torch.optim as optimizer_module
 import torch.optim.lr_scheduler as scheduler_module
 from src.utils import Logger, Setting
 import src.data as data_module
-from src.train import train, test
+from src.train import train, test, train_log, test_log
 import src.models as model_module
-
 
 def main(args, wandb=None):
     Setting.seed_everything(args.seed)
@@ -52,15 +51,17 @@ def main(args, wandb=None):
     if not args.predict:
         print(f'--------------- {args.model} TRAINING ---------------')
         model = train(args, model, data, logger, setting)
-
+        # model = train_log(args, model, data, logger, setting)
 
     ######################## INFERENCE
     if not args.predict:
         print(f'--------------- {args.model} PREDICT ---------------')
         predicts = test(args, model, data, setting)
+        # predicts = test_log(args, model, data, setting)
     else:
         print(f'--------------- {args.model} PREDICT ---------------')
         predicts = test(args, model, data, setting, args.checkpoint)
+        # predicts = test_log(args, model, data, setting, args.checkpoint)
 
 
     ######################## SAVE PREDICT
