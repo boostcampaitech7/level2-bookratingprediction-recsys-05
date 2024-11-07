@@ -266,7 +266,13 @@ def text_data_load(args):
 
 def text_data_split(args, data):
     """학습 데이터를 학습/검증 데이터로 나누어 추가한 후 반환합니다."""
-    return basic_data_split(args, data)
+    data = basic_data_split(args, data)
+    
+    # 전체 학습 데이터를 위한 X_train_full, y_train_full 생성
+    data['X_train_full'] = pd.concat([data['X_train'], data['X_valid']], axis=0).reset_index(drop=True)
+    data['y_train_full'] = pd.concat([data['y_train'], data['y_valid']], axis=0).reset_index(drop=True)
+    
+    return data
 
 
 def text_data_loader(args, data):
@@ -306,11 +312,19 @@ def text_data_loader(args, data):
                                 data['test']['user_summary_merge_vector'].values,
                                 data['test']['book_summary_vector'].values,
                                 )
-
+    full_train_dataset  = Text_Dataset(
+                                      data['X_train_full'][data['field_names']].values,
+                                      data['X_train_full']['user_summary_merge_vector'].values,
+                                      data['X_train_full']['book_summary_vector'].values,
+                                      data['y_train_full'].values
+                                      )
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.dataloader.batch_size, shuffle=args.dataloader.shuffle, num_workers=args.dataloader.num_workers)
     valid_dataloader = DataLoader(valid_dataset, batch_size=args.dataloader.batch_size, shuffle=False, num_workers=args.dataloader.num_workers) if args.dataset.valid_ratio != 0 else None
     test_dataloader = DataLoader(test_dataset, batch_size=args.dataloader.batch_size, shuffle=False, num_workers=args.dataloader.num_workers)
+    full_train_dataloader = DataLoader(full_train_dataset, batch_size=args.dataloader.batch_size, shuffle=args.dataloader.shuffle, num_workers=args.dataloader.num_workers)
+    
     data['train_dataloader'], data['valid_dataloader'], data['test_dataloader'] = train_dataloader, valid_dataloader, test_dataloader
+    data['full_train_dataloader'] = full_train_dataloader  # 추가
     
     return data

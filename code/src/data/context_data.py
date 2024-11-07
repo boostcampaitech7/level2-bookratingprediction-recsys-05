@@ -167,7 +167,13 @@ def context_data_load(args):
 
 def context_data_split(args, data):
     '''data 내의 학습 데이터를 학습/검증 데이터로 나누어 추가한 후 반환합니다.'''
-    return basic_data_split(args, data)
+    data = basic_data_split(args, data)
+    
+    # 전체 학습 데이터를 위한 X_train_full, y_train_full 생성
+    data['X_train_full'] = pd.concat([data['X_train'], data['X_valid']], axis=0).reset_index(drop=True)
+    data['y_train_full'] = pd.concat([data['y_train'], data['y_valid']], axis=0).reset_index(drop=True)
+    
+    return data
 
 
 def context_data_loader(args, data):
@@ -194,11 +200,16 @@ def context_data_loader(args, data):
     train_dataset = TensorDataset(torch.LongTensor(data['X_train'].values), torch.LongTensor(data['y_train'].values))
     valid_dataset = TensorDataset(torch.LongTensor(data['X_valid'].values), torch.LongTensor(data['y_valid'].values)) if args.dataset.valid_ratio != 0 else None
     test_dataset = TensorDataset(torch.LongTensor(data['test'].values))
+    # 전체 학습 데이터를 위한 데이터셋 생성
+    full_train_dataset = TensorDataset(torch.LongTensor(data['X_train_full'].values), torch.LongTensor(data['y_train_full'].values))
     
     train_dataloader = DataLoader(train_dataset, batch_size=args.dataloader.batch_size, shuffle=args.dataloader.shuffle, num_workers=args.dataloader.num_workers)
     valid_dataloader = DataLoader(valid_dataset, batch_size=args.dataloader.batch_size, shuffle=False, num_workers=args.dataloader.num_workers) if args.dataset.valid_ratio != 0 else None
     test_dataloader = DataLoader(test_dataset, batch_size=args.dataloader.batch_size, shuffle=False, num_workers=args.dataloader.num_workers)
-
+    # 전체 학습 데이터를 위한 데이터로더 생성
+    full_train_dataloader = DataLoader(full_train_dataset, batch_size=args.dataloader.batch_size, shuffle=args.dataloader.shuffle, num_workers=args.dataloader.num_workers)
+    
     data['train_dataloader'], data['valid_dataloader'], data['test_dataloader'] = train_dataloader, valid_dataloader, test_dataloader
-
+    data['full_train_dataloader'] = full_train_dataloader  # 추가
+    
     return data
