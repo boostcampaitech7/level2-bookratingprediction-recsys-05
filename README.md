@@ -33,7 +33,92 @@
 
 ## 📂폴더구조
 ```
-
+# level2-bookratingprediction-recsys-05/
+│
+├── .github/
+│   └── .keep
+│
+├── code/
+│   ├── config/
+│   │   ├── config_DCN_CosineAnnealing_LR.yaml
+│   │   ├── config_DCN_Exponential_LR.yaml
+│   │   ├── config_DCN_MultiStep_LR.yaml
+│   │   ├── config_DCN_ReduceLROnPlateau.yaml
+│   │   ├── config_DCN_step_LR.yaml
+│   │   ├── config_FFM_DCNV3_ensemble.yaml
+│   │   ├── config_FFM_DCNV3_ensemble_MAE.yaml
+│   │   ├── config_FFM_DCNV3_ensemble_weighted_loss.yaml
+│   │   ├── config_Many_ensemble.yaml
+│   │   ├── config_NCF.yaml
+│   │   ├── config_baseline.yaml
+│   │   ├── config_fm.yaml
+│   │   ├── config_v1.yaml
+│   │   ├── config_v1_cosineannealing_lr.yaml
+│   │   ├── config_v1_cosineannealing_wr_lr.yaml
+│   │   ├── config_v1_cyclic_t2_lr.yaml
+│   │   ├── config_v1_cyclic_tr_lr.yaml
+│   │   ├── config_v1_default_lr.yaml
+│   │   ├── config_v1_exponential_lr.yaml
+│   │   ├── config_v1_multistep_lr.yaml
+│   │   ├── config_v1_onecycle_cos_ls.yaml
+│   │   ├── config_v1_onecycle_linear_lr.yaml
+│   │   ├── config_v1_step_lr.yaml
+│   │   └── sweep_example.yaml
+│   │   
+│   ├── src/
+│   │   ├── data/
+│   │   │   ├── __init__.py
+│   │   │   ├── basic_data.py
+│   │   │   ├── context_data.py
+│   │   │   ├── image_data.py
+│   │   │   ├── text_data.py
+│   │   │   └── text_data2.py
+│   │   │
+│   │   ├── ensembles/
+│   │   │   └── ensembles.py
+│   │   │
+│   │   ├── loss/
+│   │   │   └── loss.py
+│   │   │
+│   │   ├── models/
+│   │   │   ├── CatBoost_optuna.py
+│   │   │   ├── DCN.py
+│   │   │   ├── DCNV2.py
+│   │   │   ├── DCNV3.py
+│   │   │   ├── DCN_v3.py
+│   │   │   ├── DCN_v3_FM.py
+│   │   │   ├── DCN_v3_Image.py
+│   │   │   ├── DcatN.py
+│   │   │   ├── DeepFM.py
+│   │   │   ├── FFM.py
+│   │   │   ├── FM.py
+│   │   │   ├── FM_Image.py
+│   │   │   ├── FM_Text.py
+│   │   │   ├── NCF.py
+│   │   │   ├── NCF_HyperOpt.py
+│   │   │   ├── WDN.py
+│   │   │   ├── __init__.py
+│   │   │   └── _helpers.py
+│   │   │
+│   │   ├── train/
+│   │   │   ├── __init__.py
+│   │   │   ├── trainer.py
+│   │   │   └── trainer_log.py
+│   │   │
+│   │   ├── __init__.py
+│   │   └── utils.py
+│   │
+│   ├── ensemble.py
+│   ├── main.py
+│   ├── requirement.txt
+│   ├── run_DCN_LR.sh
+│   ├── run_FFM_DCNV3_Ensemble.sh
+│   ├── run_Many_Ensemble.sh
+│   ├── run_baseline.sh
+│   └── run_v1.sh
+│
+├── .gitignore
+└── README.md
 ```
 </br>
 
