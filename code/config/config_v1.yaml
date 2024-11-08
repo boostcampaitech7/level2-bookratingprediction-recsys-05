@@ -70,6 +70,17 @@ model_args:     # model에 해당하는 파라미터만 실질적으로 사용�
         shallow_net_dropout: 0.3    # Linear Cross Network의 드롭아웃 비율
         layer_norm: True            # Layer Normalization 사용 여부
         batch_norm: True            # Batch Normalization 사용 여부
+        task: regression
+    DCNV3FM:
+        datatype: context   # basic, context, image, text 중 basic, context 가능
+        embed_dim: 16       # sparse 벡터를 임베딩할 차원
+        num_heads: 3
+        num_deep_cross_layers: 2  # Exponential Cross Network의 레이어 수
+        num_shallow_cross_layers: 3  # Linear Cross Network의 레이어 수
+        deep_net_dropout: 0.1       # Exponential Cross Network의 드롭아웃 비율
+        shallow_net_dropout: 0.3    # Linear Cross Network의 드롭아웃 비율
+        layer_norm: True            # Layer Normalization 사용 여부
+        batch_norm: True            # Batch Normalization 사용 여부
         task: regression            # 'classification' 또는 'regression'
     Image_FM:
         datatype: image     # basic, context, image, text 중 image 가능

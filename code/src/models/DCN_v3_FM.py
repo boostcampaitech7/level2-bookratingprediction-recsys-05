@@ -1,13 +1,24 @@
 import torch
 import torch.nn as nn
-from ._helpers import FeaturesEmbedding
+from torch.nn import functional as F
 
-class MultiHeadFeaturesEmbedding(nn.Module):
+class FMEmbedding(nn.Module):
+    def __init__(self, field_dims, embed_dim):
+        super(FMEmbedding, self).__init__()
+        self.embeddings = nn.ModuleList([nn.Embedding(field_dim, embed_dim) for field_dim in field_dims])
+
+    def forward(self, x):
+        # x: (batch_size, num_fields)
+        embedded = [embedding(x[:, i]) for i, embedding in enumerate(self.embeddings)]
+        return torch.stack(embedded, dim=1)  # (batch_size, num_fields, embed_dim)
+
+
+class MultiHeadFMFeaturesEmbedding(nn.Module):
     def __init__(self, field_dims, embed_dim, num_heads=2):
         super().__init__()
         self.num_heads = num_heads
         self.embed_dim = embed_dim
-        self.embedding = FeaturesEmbedding(field_dims, embed_dim * num_heads)
+        self.embedding = FMEmbedding(field_dims, embed_dim * num_heads)
 
     def forward(self, x):
         # x: (batch_size, num_fields)
@@ -20,7 +31,6 @@ class MultiHeadFeaturesEmbedding(nn.Module):
         # Flatten num_fields and embed_dim dimensions
         embed_x = embed_x.reshape(batch_size, self.num_heads, -1)  # (batch_size, num_heads, num_fields * embed_dim)
         return embed_x
-
 
 class ExponentialCrossNetworkV3(nn.Module):
     def __init__(self, input_dim, num_layers, num_heads=1, layer_norm=True, batch_norm=False, dropout=0.1):
@@ -103,13 +113,13 @@ class LinearCrossNetworkV3(nn.Module):
         logit = self.fc(x)
         return logit
 
-
+# DeepFM 모델 정의
 class DeepCrossNetworkV3(nn.Module):
     def __init__(self, args, data):
         super().__init__()
         self.field_dims = data['field_dims']
         self.num_heads = args.num_heads  # Add num_heads in your args
-        self.embedding = MultiHeadFeaturesEmbedding(self.field_dims, args.embed_dim, self.num_heads)
+        self.embedding = MultiHeadFMFeaturesEmbedding(self.field_dims, args.embed_dim, self.num_heads)
         self.input_dim = len(self.field_dims) * args.embed_dim
         self.exponential_cross_network = ExponentialCrossNetworkV3(
             input_dim=self.input_dim,

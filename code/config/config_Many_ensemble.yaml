@@ -16,7 +16,7 @@ seed: 0         # 시드 고정
 device: cuda    # 가능한 값 : cpu, cuda, mps
 model: FM       # 모델 선택
 wandb: False                            # wandb 사용 여부
-wandb_project: 'Seed-Ensemble (FFM + DCN_V3) + Weighted Loss' # wandb 프로젝트 이름
+wandb_project: 'Many-Ensemble' # wandb 프로젝트 이름
 run_name: ''                            # wandb 실행 이름. 빈 문자열일 경우 자동 생성
 
 
@@ -71,6 +71,24 @@ model_args:     # model에 해당하는 파라미터만 실질적으로 사용�
         layer_norm: True            # Layer Normalization 사용 여부
         batch_norm: True            # Batch Normalization 사용 여부
         task: regression            # 'classification' 또는 'regression'
+    Image_DCNV3:  # 새로운 모델 추가
+        datatype: image   # 이미지 데이터를 사용하므로 'image'로 설정
+        embed_dim: 16
+        num_heads: 2
+        num_deep_cross_layers: 2
+        num_shallow_cross_layers: 3
+        deep_net_dropout: 0.1
+        shallow_net_dropout: 0.3
+        layer_norm: True
+        batch_norm: True
+        task: regression
+        img_size: 64                # 이미지 크기
+        kernel_size: 3              # CNN 커널 크기
+        channel_list: [8, 16, 32]   # CNN 채널 리스트
+        stride: 2                   # CNN 스트라이드
+        padding: 1                  # CNN 패딩
+        cnn_batchnorm: True         # CNN 배치 정규화 사용 여부
+        cnn_dropout: 0.2            # CNN 드롭아웃 비율
     Image_FM:
         datatype: image     # basic, context, image, text 중 image 가능
         embed_dim: 16       # sparse 벡터 및 이미지 벡터를 임베딩할 차원
@@ -134,7 +152,7 @@ optimizer:
         weight_decay: 1e-4  # 예) Adam 등 / L2 정규화 가중치
         amsgrad: False      # 예) Adam 등 / amsgrad 사용 여부
 
-loss: WeightedRMSELoss         # 직접 정의한 loss 클래스 또는 torch.nn.Module 클래스 (https://pytorch.org/docs/stable/nn.html#loss-functions)
+loss: RMSELoss          # 직접 정의한 loss 클래스 또는 torch.nn.Module 클래스 (https://pytorch.org/docs/stable/nn.html#loss-functions)
 
 # lr_scheduler:
 #     use: False                  # True: 사용 / False: 사용하지 않음 (단, valid_ratio가 0일 경우 validation set이 없어 사용 불가)
